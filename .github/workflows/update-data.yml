@@ -36,6 +36,10 @@ jobs:
 
       - name: Fetch standings and tickets
         run: node update-data.mjs
+        env:
+          # Optional. Add under Settings → Secrets and variables → Actions
+          # to switch on live standings. Fixtures work without it.
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
 
       - name: Commit if anything changed
         run: |
@@ -52,8 +56,8 @@ jobs:
       - name: Report parser health
         run: |
           if [ "$(cat parser-status.txt)" != "ok" ]; then
-            echo "Standings could not be parsed. The site still published;"
-            echo "the table falls back to its built-in snapshot."
+            echo "No fixtures could be read from the league page. The site still"
+            echo "published; the tickets section falls back to its snapshot."
             echo "Run 'node update-data.mjs --dry-run' locally to see what changed."
             exit 1
           fi
