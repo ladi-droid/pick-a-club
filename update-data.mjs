@@ -64,39 +64,68 @@ async function get(url) {
   return res.text();
 }
 
-/* ---------- standings ---------- */
+/* ---------- standings ----------
+   Deliberately structure-agnostic. Earlier versions keyed off the shape of
+   the team links, which broke the moment the source changed its markup.
+   This walks every table on the page, treats any row containing a club we
+   recognise as a candidate, and keeps only rows where wins + draws + losses
+   equals games played. That arithmetic check is what makes it safe to be
+   loose about everything else. */
 async function getStandings() {
   const html = await get(STANDINGS_URL);
-  const rows = [];
+  const tables = html.match(/<table[\s\S]*?<\/table>/gi) || [];
+  let best = [], inspected = 0;
 
-  for (const tr of html.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || []) {
-    if (!/\/teams\/te\d+\//.test(tr)) continue;
+  for (const table of tables) {
+    const rows = [];
+    for (const tr of table.match(/<tr[\s\S]*?<\/tr>/gi) || []) {
+      const cells = (tr.match(/<t[dh][^>]*>[\s\S]*?<\/t[dh]>/gi) || []).map(clean);
+      if (cells.length < 6) continue;
+      inspected++;
 
-    const cells = (tr.match(/<td[^>]*>[\s\S]*?<\/td>/gi) || []).map(clean);
-    if (cells.length < 9) continue;
+      const nameIdx = cells.findIndex((c) => c.length > 2 && keyFor(c));
+      if (nameIdx === -1) continue;
+      const key = keyFor(cells[nameIdx]);
+      if (rows.some((r) => r.key === key)) continue;   // first row per club wins
 
-    const nameCell = cells.find((c) => c && keyFor(c));
-    const key = keyFor(nameCell);
-    if (!key) continue;
+      // Read the numbers that follow the club name.
+      const nums = [];
+      let gf = null, ga = null;
+      for (const c of cells.slice(nameIdx + 1)) {
+        const combined = c.match(/^(\d+)\s*[:\-]\s*(\d+)$/);   // "8:1" style
+        if (combined && gf === null) { gf = +combined[1]; ga = +combined[2]; continue; }
+        const n = c.match(/^([+\-\u2212]?\d+)$/);
+        if (n) nums.push(Number(n[1].replace('\u2212', '-')));
+      }
+      if (nums.length < 5) continue;
 
-    const nums = cells.filter((c) => /^-?\d+$/.test(c)).map(Number);
-    const score = cells.find((c) => /^\d+\s*:\s*\d+$/.test(c));
-    if (nums.length < 5 || !score) continue;
+      const [p, w, d, l] = nums;
+      const pts = nums[nums.length - 1];
+      if (gf === null) { gf = nums[4]; ga = nums[5]; }        // separate GF / GA columns
+      if (![p, w, d, l, pts, gf, ga].every(Number.isFinite)) continue;
+      if (w + d + l !== p) continue;                          // the real validity test
+      if (pts > p * 3) continue;
 
-    const [gf, ga] = score.split(":").map((n) => Number(n.trim()));
-    if (rows.some((r) => r.key === key)) continue;
-
-    rows.push({
-      key,
-      name: clean(nameCell),
-      p: nums[0], w: nums[1], d: nums[2], l: nums[3],
-      gf, ga,
-      pts: nums[nums.length - 1]
-    });
+      rows.push({ key, name: clean(cells[nameIdx]), p, w, d, l, gf, ga, pts });
+    }
+    if (rows.length > best.length) best = rows;
   }
 
-  rows.sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf);
-  return rows;
+  console.log(`  scanned ${tables.length} tables, ${inspected} candidate rows`);
+
+  if (best.length < 10) {
+    // Print enough to diagnose without dumping the whole page into the log.
+    const sample = (html.match(/<tr[\s\S]*?<\/tr>/gi) || []).slice(0, 4)
+      .map((tr) => (tr.match(/<t[dh][^>]*>[\s\S]*?<\/t[dh]>/gi) || []).map(clean).join(' | '))
+      .filter(Boolean);
+    if (sample.length) {
+      console.error('  first rows seen on the page, for debugging:');
+      sample.forEach((s) => console.error('    ' + s.slice(0, 160)));
+    }
+  }
+
+  best.sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf);
+  return best;
 }
 
 /* ---------- fixtures on sale ---------- */
@@ -165,7 +194,7 @@ const [standings, fixtures] = await Promise.all([
 const played = standings.length ? standings[0].p : null;
 const payload = {
   fetchedAt: new Date().toISOString(),
-  standings,
+  standings: standings.length >= 10 ? standings : [],
   standingsLabel: played ? `after matchweek ${played}` : "updated just now",
   fixtures
 };
@@ -180,13 +209,17 @@ if (dryRun) {
   console.log("wrote data.json");
 }
 
-/* Empty standings means the parser broke — fail loudly so the workflow
-   emails you. Empty fixtures is normal between matchweeks, so it only
-   warns. The page keeps showing its snapshot either way. */
+/* Empty standings means the parser broke. We still write data.json — the page
+   ignores an empty standings array and falls back to its snapshot, and fixtures
+   may well have parsed fine. The workflow commits first and checks afterwards,
+   so a standings break never blocks a ticket refresh. */
 if (standings.length < 10) {
-  console.error("Standings parser returned too few rows. Markup has probably changed.");
-  process.exit(1);
+  console.error("::error::Standings parser returned " + standings.length +
+    " rows. The source markup has probably changed.");
+  await writeFile("parser-status.txt", "standings-failed\n");
+} else {
+  await writeFile("parser-status.txt", "ok\n");
 }
 if (!fixtures.length) {
-  console.warn("No fixtures on sale — normal between rounds, but worth a look if it persists.");
+  console.warn("::warning::No fixtures on sale — normal between rounds, but worth a look if it persists.");
 }
