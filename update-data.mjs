@@ -58,10 +58,53 @@ function keyFor(name) {
   return null;
 }
 
-async function get(url) {
-  const res = await fetch(url, { headers: { "User-Agent": UA } });
-  if (!res.ok) throw new Error(`${url} responded ${res.status}`);
-  return res.text();
+/* Some sites turn away anything that doesn't look like a browser. These are
+   the headers a real Chrome request sends; they cost nothing and defeat the
+   simpler bot filters. Every fetch reports status and size so a block is
+   obvious in the log instead of looking like a parser bug. */
+const BROWSER_HEADERS = {
+  "User-Agent": UA,
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-GB,en;q=0.9",
+  "Cache-Control": "no-cache"
+};
+
+async function get(url, label = url) {
+  const res = await fetch(url, { headers: BROWSER_HEADERS, redirect: "follow" });
+  const body = await res.text();
+  console.log(`  fetch ${label}: HTTP ${res.status}, ${body.length} bytes`);
+  if (!res.ok) {
+    console.error(`  first 300 chars: ${body.slice(0, 300).replace(/\s+/g, " ")}`);
+    throw new Error(`${label} responded ${res.status}`);
+  }
+  if (body.length < 5000) {
+    console.error(`  suspiciously small response — first 300 chars: ${body.slice(0, 300).replace(/\s+/g, " ")}`);
+  }
+  return body;
+}
+
+/* Wikipedia's season article carries the same table and, unlike the scraping
+   targets, has a documented API that welcomes automated access. Used as a
+   fallback so one site blocking us doesn't take the standings down. */
+const WIKI_PAGES = ["2026–27 UAE Pro League", "2026-27 UAE Pro League", "UAE Pro League"];
+
+async function getStandingsFromWikipedia() {
+  for (const page of WIKI_PAGES) {
+    const url = "https://en.wikipedia.org/w/api.php?action=parse&prop=text&format=json&page="
+              + encodeURIComponent(page);
+    try {
+      const raw = await get(url, `wikipedia "${page}"`);
+      const json = JSON.parse(raw);
+      const html = json?.parse?.text?.["*"];
+      if (!html) { console.log(`  no content for "${page}"`); continue; }
+      const rows = parseStandingsHtml(html);
+      if (rows.length >= 10) { console.log(`  wikipedia gave ${rows.length} rows`); return rows; }
+      console.log(`  wikipedia gave only ${rows.length} usable rows`);
+    } catch (e) {
+      console.log(`  wikipedia "${page}" failed: ${e.message}`);
+    }
+  }
+  return [];
 }
 
 /* ---------- standings ----------
@@ -72,7 +115,23 @@ async function get(url) {
    equals games played. That arithmetic check is what makes it safe to be
    loose about everything else. */
 async function getStandings() {
-  const html = await get(STANDINGS_URL);
+  let rows = [];
+  try {
+    rows = parseStandingsHtml(await get(STANDINGS_URL, "worldfootball"));
+    console.log(`  worldfootball gave ${rows.length} rows`);
+  } catch (e) {
+    console.log(`  worldfootball failed: ${e.message}`);
+  }
+  if (rows.length < 10) {
+    console.log("  falling back to Wikipedia");
+    const alt = await getStandingsFromWikipedia();
+    if (alt.length > rows.length) rows = alt;
+  }
+  rows.sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf);
+  return rows;
+}
+
+function parseStandingsHtml(html) {
   const tables = html.match(/<table[\s\S]*?<\/table>/gi) || [];
   let best = [], inspected = 0;
 
@@ -124,7 +183,6 @@ async function getStandings() {
     }
   }
 
-  best.sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf);
   return best;
 }
 
@@ -132,7 +190,7 @@ async function getStandings() {
 const MONTHS = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
 
 async function getFixtures() {
-  const html = await get(TICKETS_URL);
+  const html = await get(TICKETS_URL, "platinumlist");
   const seen = new Set();
   const out = [];
 
@@ -179,6 +237,11 @@ async function getFixtures() {
     });
   }
 
+  console.log(`  platinumlist: ${seen.size} event links seen, ${out.length} usable fixtures`);
+  if (!seen.size) {
+    const hint = html.match(/platinumlist\.net\/[^"'\s]{0,80}/i);
+    console.error('  no ticket links found. Sample link from the page: ' + (hint ? hint[0] : 'none at all'));
+  }
   out.sort((a, b) => a.sortKey - b.sortKey);
   return out.map(({ sortKey, ...f }) => f);
 }
