@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fourteen clubs, one drive home — ADNOC Pro League 2026/27</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Archivo+Black&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --black:#000; --bone:#F2EFE9; --steel:#8C8C85; --signal:#E8452C;
+  --hair:rgba(242,239,233,.16);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--black);color:var(--bone);font-family:Archivo,system-ui,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px}
+
+/* hero */
+.hero{padding:44px 0 0}
+.topbar{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--hair);padding-bottom:14px;font-size:12.5px;color:var(--steel);letter-spacing:.06em}
+.topbar b{color:var(--bone);font-weight:600}
+h1{font-family:"Archivo Black",Archivo,sans-serif;text-transform:uppercase;letter-spacing:-.03em;line-height:.82;font-size:clamp(46px,10.5vw,152px);margin:34px 0 0}
+h1 .chip{display:inline-block;vertical-align:middle;width:clamp(88px,20vw,290px);height:clamp(40px,8.2vw,116px);margin:0 .1em .12em;object-fit:cover}
+h1 em{font-style:normal;color:var(--signal)}
+.lede{display:grid;grid-template-columns:1fr;gap:22px;margin:38px 0 0;padding-bottom:40px}
+.lede p{margin:0;max-width:56ch;font-size:17.5px;color:#C9C6BF}
+.lede p b{color:var(--bone);font-weight:600}
+.metastack{font-size:12.5px;letter-spacing:.08em;color:var(--steel);line-height:1.9}
+.metastack b{color:var(--bone);font-weight:500}
+@media(min-width:900px){.lede{grid-template-columns:1.6fr .7fr;gap:60px;align-items:start}}
+
+/* location bar */
+.locbar{border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);padding:24px 0;margin:0 0 26px}
+.inline-link{color:var(--bone);text-decoration:none;border-bottom:1px solid var(--signal)}
+.inline-link:hover{color:var(--signal)}
+.locbar label{display:block;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--steel);margin-bottom:12px}
+.locrow{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+#locInput{
+  flex:1 1 280px;min-width:0;background:transparent;border:1px solid var(--hair);color:var(--bone);
+  font:inherit;font-size:17px;padding:13px 16px;
+}
+#locInput:focus{outline:none;border-color:var(--bone)}
+#locInput::placeholder{color:#5E5E59}
+.locbtn{
+  font:inherit;font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  background:transparent;border:1px solid var(--hair);color:var(--bone);padding:13px 20px;cursor:pointer;white-space:nowrap;
+}
+.locbtn.primary{background:var(--signal);border-color:var(--signal);color:#fff}
+.locbtn:hover{border-color:var(--bone)}
+.locbtn.primary:hover{background:#c9351e;border-color:#c9351e}
+.locbtn:disabled{opacity:.45;cursor:default}
+.locbtn:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.locstatus{margin:12px 0 0;font-size:13px;color:var(--steel);min-height:20px}
+.locstatus.err{color:var(--signal)}
+.locsug{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.locsug button{
+  font:inherit;font-size:12px;background:none;border:0;border-bottom:1px solid var(--hair);
+  color:var(--steel);padding:2px 0;cursor:pointer;letter-spacing:.03em;
+}
+.locsug button:hover{color:var(--bone);border-color:var(--signal)}
+.locsug span{font-size:12px;color:#5E5E59;letter-spacing:.03em}
+
+/* sections */
+.sec{padding:78px 0 0}
+.marker{font-size:13px;color:var(--signal);letter-spacing:.1em;margin:0 0 12px}
+.sec > h2{font-family:"Archivo Black",Archivo,sans-serif;text-transform:uppercase;letter-spacing:-.025em;line-height:.88;font-size:clamp(34px,6.4vw,84px);margin:0 0 10px}
+.sec > .note{margin:0 0 26px;color:var(--steel);font-size:15px;max-width:60ch}
+
+/* freshness */
+.freshness{display:inline-flex;align-items:center;gap:8px;margin:0 0 20px;font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--steel);border:1px solid var(--hair);padding:8px 14px}
+.freshness i{width:7px;height:7px;border-radius:50%;background:var(--steel);flex:0 0 auto}
+.freshness.live i{background:#4ED37F}
+.freshness.stale i{background:var(--signal)}
+.freshness.loading i{background:var(--bone)}
+.reloadbtn{font:inherit;font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;background:none;border:0;border-bottom:1px solid var(--signal);color:var(--bone);padding:0 0 2px;margin-left:4px;cursor:pointer}
+.empty{padding:26px 0;color:var(--steel);font-size:14px}
+
+/* table */
+.tablewrap{overflow-x:auto;border-top:2px solid var(--bone)}
+table.league{width:100%;border-collapse:collapse;min-width:660px}
+table.league th{text-align:left;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--steel);font-weight:500;padding:14px 8px;border-bottom:1px solid var(--hair)}
+table.league td{padding:15px 8px;border-bottom:1px solid var(--hair);font-size:14.5px;vertical-align:middle}
+table.league th.num,table.league td.num{text-align:right;width:52px}
+table.league td.pos{width:44px;font-family:"Archivo Black",sans-serif;font-size:17px;color:var(--steel)}
+table.league td.name{font-weight:600;white-space:nowrap}
+table.league td.name i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:11px;vertical-align:baseline}
+table.league td.pts{font-family:"Archivo Black",sans-serif;font-size:19px;letter-spacing:-.02em}
+table.league td.trip{font-size:12.5px;color:var(--steel);letter-spacing:.03em;white-space:nowrap;text-align:right}
+table.league tr.far td{color:#9A9A93}
+table.league tr.far td.pos{color:#5E5E59}
+.zone{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--steel);white-space:nowrap}
+.zone.acl{color:var(--bone)}
+.zone.rel{color:var(--signal)}
+.tablekey{margin-top:16px;font-size:12.5px;color:var(--steel)}
+
+/* fixtures */
+.round{border-top:2px solid var(--bone);margin-top:6px}
+.fix{display:grid;gap:8px 22px;padding:22px 0;border-bottom:1px solid var(--hair);grid-template-columns:1fr;align-items:center}
+@media(min-width:880px){.fix{grid-template-columns:96px 1fr 210px 150px;gap:24px}}
+.fix .when{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--steel)}
+.fix .tie{font-family:"Archivo Black",sans-serif;text-transform:uppercase;letter-spacing:-.02em;font-size:clamp(16px,2.5vw,22px);line-height:1.15}
+.fix .tie .v{color:var(--steel);margin:0 2px}
+.pos-badge{
+  display:inline-block;font-family:Archivo,sans-serif;font-weight:600;font-size:10px;letter-spacing:.06em;
+  color:var(--steel);border:1px solid var(--hair);padding:2px 6px;margin-right:7px;vertical-align:middle;
+  position:relative;top:-2px;
+}
+.pos-badge.top{color:var(--bone);border-color:rgba(242,239,233,.45)}
+.pos-badge.bottom{color:var(--signal);border-color:rgba(232,69,44,.5)}
+.fix .at{font-size:12.5px;color:var(--steel);letter-spacing:.03em}
+.fix .at b{display:block;color:#C9C6BF;font-weight:500;margin-bottom:2px}
+.fix .buy{justify-self:start;font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--bone);text-decoration:none;border:1px solid var(--hair);padding:11px 16px;white-space:nowrap}
+.fix .buy:hover{background:var(--signal);border-color:var(--signal);color:#fff}
+.fix.pick{background:linear-gradient(90deg,rgba(232,69,44,.09),transparent 62%);padding-left:16px;margin-left:-16px}
+.ticketnote{margin-top:22px;font-size:13px;color:var(--steel);max-width:66ch}
+
+/* map */
+#map{height:min(74vh,660px);width:100%;background:#0d0d0d;border:1px solid var(--hair)}
+.leaflet-container{font-family:Archivo,sans-serif;background:#0d0d0d}
+.leaflet-popup-content-wrapper{background:var(--bone);color:#000;border-radius:0;box-shadow:none}
+.leaflet-popup-tip{background:var(--bone)}
+.leaflet-popup-content{margin:13px 15px;font-size:13.5px;line-height:1.45}
+.leaflet-popup-content .pn{font-family:"Archivo Black",sans-serif;text-transform:uppercase;font-size:16px;letter-spacing:-.02em;display:block;margin-bottom:3px}
+.leaflet-popup-content .pd{color:#555;display:block;margin-bottom:8px}
+.leaflet-popup-content a{color:#000;font-weight:600;text-decoration:none;border-bottom:2px solid var(--signal)}
+.leaflet-popup-close-button{color:#000!important}
+.leaflet-control-attribution{background:rgba(0,0,0,.7)!important;color:#7d7d78!important;font-size:10px!important}
+.leaflet-control-attribution a{color:#a3a39d!important}
+.pin{border-radius:50%;border:2px solid #000;box-shadow:0 0 0 2px currentColor}
+.maplegend{display:flex;flex-wrap:wrap;gap:18px;margin-top:14px;font-size:12.5px;color:var(--steel);letter-spacing:.04em}
+.maplegend span{display:flex;align-items:center;gap:7px}
+.maplegend i{width:11px;height:11px;border-radius:50%;display:inline-block}
+
+/* filters */
+.chips{display:flex;flex-wrap:wrap;gap:9px}
+.chip-btn{font:inherit;font-size:14px;font-weight:500;background:transparent;color:var(--bone);border:1px solid var(--hair);padding:10px 18px;cursor:pointer;text-transform:uppercase;letter-spacing:.04em}
+.chip-btn:hover{border-color:var(--bone)}
+.chip-btn[aria-pressed="true"]{background:var(--signal);border-color:var(--signal);color:#fff}
+.chip-btn:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.readout{margin:18px 0 0;font-size:14px;color:var(--steel);min-height:22px}
+
+/* clubs */
+.band{margin-top:60px}
+.band-title{display:flex;align-items:baseline;gap:16px;border-top:2px solid var(--bone);padding-top:12px;margin-bottom:24px;flex-wrap:wrap}
+.band-title h3{font-family:"Archivo Black",sans-serif;text-transform:uppercase;letter-spacing:-.02em;font-size:clamp(22px,3.6vw,38px);margin:0;line-height:1}
+.band-title span{margin-left:auto;font-size:12.5px;color:var(--steel);letter-spacing:.06em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(316px,1fr));gap:2px}
+.card{background:#0C0C0C;display:flex;flex-direction:column;position:relative}
+.card.dim{opacity:.2}
+.shot{position:relative;aspect-ratio:4/3;overflow:hidden;background:#151515}
+.shot img{width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(.35) contrast(1.06)}
+.card:hover .shot img{filter:none}
+.shot::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.85) 0%,rgba(0,0,0,0) 52%)}
+.stripe{position:absolute;top:0;left:0;width:100%;height:4px;background:var(--club);z-index:2}
+.drive{position:absolute;left:16px;bottom:14px;z-index:2;font-family:"Archivo Black",sans-serif;font-size:clamp(26px,4vw,38px);letter-spacing:-.03em;line-height:1}
+.drive small{display:block;font-family:Archivo,sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--steel);margin-top:5px;font-weight:500}
+.credit{position:absolute;right:8px;top:12px;z-index:2;font-size:9.5px;color:rgba(242,239,233,.5);text-align:right;max-width:52%}
+.body{padding:20px 18px 22px;display:flex;flex-direction:column;flex:1}
+.club{font-family:"Archivo Black",sans-serif;text-transform:uppercase;letter-spacing:-.025em;font-size:27px;line-height:.95;margin:0;display:flex;align-items:baseline;gap:9px}
+.club .lpos{font-family:Archivo,sans-serif;font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--steel);border:1px solid var(--hair);padding:3px 6px;flex:0 0 auto}
+.ground{font-size:12.5px;color:var(--steel);letter-spacing:.03em;margin:7px 0 14px}
+.why{font-size:14.5px;color:#C9C6BF;margin:0 0 16px}
+.squad{list-style:none;margin:0 0 18px;padding:14px 0 0;border-top:1px solid var(--hair);font-size:13px}
+.squad li{display:flex;gap:9px;padding:3px 0}
+.squad li b{font-weight:600;white-space:nowrap}
+.squad li span{color:var(--steel)}
+.go{margin-top:auto;align-self:flex-start;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--bone);text-decoration:none;border-bottom:2px solid var(--signal);padding-bottom:3px}
+.go:hover{color:var(--signal)}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--hair);margin-top:90px;border:1px solid var(--hair)}
+@media(min-width:760px){.stats{grid-template-columns:repeat(4,1fr)}}
+.stat{background:var(--black);padding:32px 22px 26px}
+.stat b{display:block;font-family:"Archivo Black",sans-serif;font-size:clamp(32px,5.4vw,58px);letter-spacing:-.04em;line-height:.9}
+.stat span{display:block;margin-top:10px;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--steel)}
+
+/* verdict */
+.verdict{margin-top:90px;border-top:1px solid var(--hair);padding-top:56px;display:grid;gap:40px}
+@media(min-width:940px){.verdict{grid-template-columns:.85fr 1.15fr;gap:70px}}
+.stack{font-family:"Archivo Black",sans-serif;text-transform:uppercase;letter-spacing:-.035em;line-height:.82;font-size:clamp(48px,8.6vw,104px);margin:0}
+.stack em{font-style:normal;color:var(--signal);display:block}
+.verdict p{margin:0 0 18px;max-width:60ch;font-size:16.5px;color:#C9C6BF}
+.verdict p b{color:var(--bone);font-weight:600}
+.others{margin-top:30px;padding-top:22px;border-top:1px solid var(--hair);display:grid;gap:14px}
+.other{display:flex;gap:14px;align-items:baseline;font-size:14.5px;color:#C9C6BF}
+.other b{font-family:"Archivo Black",sans-serif;text-transform:uppercase;font-size:14px;color:var(--bone);flex:0 0 130px}
+
+footer{margin-top:100px;border-top:1px solid var(--hair);padding:44px 0 70px;display:grid;gap:34px}
+@media(min-width:820px){footer{grid-template-columns:repeat(3,1fr);gap:40px}}
+.foot h4{font-family:"Archivo Black",sans-serif;text-transform:uppercase;font-size:26px;letter-spacing:-.02em;margin:0 0 8px}
+.foot p{margin:0;font-size:13.5px;color:var(--steel);max-width:34ch}
+.foot a{color:var(--bone);text-decoration:none;border-bottom:1px solid var(--signal);font-size:13.5px}
+.colophon{grid-column:1/-1;border-top:1px solid var(--hair);padding-top:20px;font-size:11.5px;color:#5E5E59;line-height:1.7;max-width:88ch}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="topbar">
+    <div>ADNOC PRO LEAGUE — <b>2026/27</b></div>
+    <div>FOURTEEN CLUBS, FOUR EMIRATES</div>
+  </div>
+
+  <h1>Fourteen clubs. <img class="chip" alt="" src="https://lh3.googleusercontent.com/place-photos/AG9NLjAHDpD-406TVSJs8N9Hx_SHoEkhbwX14li1RZKH2V4fXg9Bd49JLYreoW0KgGl_SGzQs6KAG1vjgO7_WC8u2oqvi0oNKVTlPpeRaKKDBK0xBEo8-ZQttc7q-kihSgKRccX0luPyKr2VhiYf5Ts=s4800-w1200-h800"> One <em>drive home.</em></h1>
+
+  <div class="lede">
+    <p>The thing that decides whether you actually become a supporter isn't the league table — it's whether you'll still be going in February, on a Tuesday, in traffic. So everything below is sorted by <b>how far each ground is from wherever you live</b>, not by how good the team is.</p>
+    <div class="metastack">
+      START — <b id="metaHome">Jumeirah Village Circle</b><br>
+      NEAREST — <b id="metaNear">—</b><br>
+      FURTHEST — <b id="metaFar">—</b><br>
+      ©2026
+    </div>
+  </div>
+
+</header>
+
+<!-- ( 1 ) TABLE -->
+<section class="sec">
+  <p class="marker">( 1 )</p>
+  <h2>The table</h2>
+  <p class="note">Where everyone stands this morning, with the drive from your door in the last column. Clubs within an hour are in white — that's the shortlist the rest of this page argues about. <a href="#locbar" class="inline-link">Change where you're starting from</a>.</p>
+  <p class="freshness" id="tableFresh"><i></i><span>Checking for updates</span></p>
+  <div class="tablewrap">
+    <table class="league">
+      <thead><tr>
+        <th class="num">#</th><th>Club</th>
+        <th class="num">P</th><th class="num">W</th><th class="num">D</th><th class="num">L</th>
+        <th class="num">GF</th><th class="num">GA</th><th class="num">GD</th><th class="num">Pts</th>
+        <th class="trip" style="text-align:right">From you</th><th>Zone</th>
+      </tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  <p class="tablekey">Top three qualify for the AFC Champions League Elite, bottom two go down to the First Division.</p>
+</section>
+
+<!-- ( 2 ) FIXTURES -->
+<section class="sec">
+  <p class="marker">( 2 )</p>
+  <h2>Next up</h2>
+  <p class="note">Tickets go on sale roughly a week before each round, from AED 20. League position is shown against each side. Women, children and senior citizens enter free from the ticket booth on matchday.</p>
+  <p class="freshness" id="fixFresh"><i></i><span>Checking for updates</span></p>
+  <div class="round" id="fixtureList"></div>
+  <p class="ticketnote" id="fixtureNote"></p>
+</section>
+
+<!-- ( 3 ) MAP -->
+<section class="sec" id="map-section">
+  <p class="marker">( 3 )</p>
+  <h2>The map</h2>
+  <p class="note">Every ground in the league, with your starting point marked in red. Tap a pin for the drive and directions.</p>
+    <div class="locbar" id="locbar">
+      <label for="locInput">Where are you starting from?</label>
+      <div class="locrow">
+        <input id="locInput" type="text" autocomplete="off" spellcheck="false"
+               placeholder="Type a neighbourhood, city or address" value="Jumeirah Village Circle, Dubai">
+        <button class="locbtn primary" id="locGo" type="button">Update</button>
+        <button class="locbtn" id="locMe" type="button">Use my location</button>
+      </div>
+      <p class="locstatus" id="locStatus"></p>
+      <div class="locsug" id="locSug">
+        <span>Try:</span>
+        <button type="button" data-q="Dubai Marina, Dubai">Dubai Marina</button>
+        <button type="button" data-q="Deira, Dubai">Deira</button>
+        <button type="button" data-q="Al Nahda, Sharjah">Al Nahda, Sharjah</button>
+        <button type="button" data-q="Khalifa City, Abu Dhabi">Khalifa City</button>
+        <button type="button" data-q="Al Ain, United Arab Emirates">Al Ain</button>
+      </div>
+    </div>
+  <div id="map"></div>
+  <div class="maplegend">
+    <span><i style="background:#E8452C"></i> You</span>
+    <span><i style="background:#F2EFE9"></i> Under 35 min</span>
+    <span><i style="background:#8C8C85"></i> 35–60 min</span>
+    <span><i style="background:#4A4A46"></i> Over an hour</span>
+  </div>
+</section>
+
+<!-- ( 4 ) FILTER -->
+<section class="sec">
+  <p class="marker">( 4 )</p>
+  <h2>What actually matters</h2>
+  <p class="note">Pick your conditions. Clubs that don't meet them drop away.</p>
+  <div class="chips" id="chips">
+    <button class="chip-btn" aria-pressed="false" data-f="close">Weeknight-close</button>
+    <button class="chip-btn" aria-pressed="false" data-f="dubai">Dubai clubs</button>
+    <button class="chip-btn" aria-pressed="false" data-f="winning">Wins things</button>
+    <button class="chip-btn" aria-pressed="false" data-f="underdog">Underdog</button>
+    <button class="chip-btn" aria-pressed="false" data-f="atmos">Real crowd</button>
+    <button class="chip-btn" aria-pressed="false" data-f="cheap">Small ground</button>
+  </div>
+  <p class="readout" id="readout">All fourteen clubs showing.</p>
+</section>
+
+<!-- ( 5 ) CLUBS -->
+<section class="sec">
+  <p class="marker">( 5 )</p>
+  <h2>The clubs</h2>
+  <p class="note">Grouped by how long it takes you to get there. Squad names are current to the latest matchweek; photographs are contributor images from Google Maps.</p>
+  <div id="clubBands"></div>
+</section>
+
+<div class="stats">
+  <div class="stat"><b>14</b><span>Clubs in the league</span></div>
+  <div class="stat"><b id="statBand">—</b><span>Within half an hour</span></div>
+  <div class="stat"><b id="statNear">—</b><span>To the nearest ground</span></div>
+  <div class="stat"><b id="statFar">—</b><span>To the furthest</span></div>
+</div>
+
+<section class="verdict">
+  <h2 class="stack">Go<br>with<br><em id="verdictClub">—</em></h2>
+  <div>
+    <p id="verdictLead"></p>
+    <p id="verdictCase"></p>
+    <p>Every argument for the bigger clubs quietly assumes you'll make the drive. You won't — not every other week. An hour of motorway for ninety minutes of football is the gap where good intentions go to die, and the club you can reach on a whim will always out-earn the one you admire from a distance.</p>
+    <div class="others" id="verdictOthers"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot">
+    <h4>Go.</h4>
+    <p>Every fixture in the league, on sale in one place, updated each matchweek.</p>
+    <a href="https://uaeproleague.platinumlist.net/" target="_blank" rel="noopener">Pro League on Platinumlist</a>
+  </div>
+  <div class="foot">
+    <h4>Check.</h4>
+    <p>Fixtures, standings and squad lists, updated every matchweek.</p>
+    <a href="https://www.uaeproleague.ae/en/fixtures" target="_blank" rel="noopener">ADNOC Pro League</a>
+  </div>
+  <div class="foot">
+    <h4>Drive.</h4>
+    <p>Every card links straight into Maps with your starting point already set.</p>
+    <a href="#map-section">Back to the map</a>
+  </div>
+  <p class="colophon">Standings, scorers and squads reflect the 2026/27 ADNOC Pro League, refreshed automatically from uaeproleague.ae, worldfootball.net and the league's Platinumlist store. Driving times are calculated by OSRM from your chosen starting point and are estimates without live traffic — use the directions links for real-time routing. Place search by Nominatim / OpenStreetMap. Stadium photographs are contributor images from Google Maps, credited on each card. Map tiles © OpenStreetMap contributors, © CARTO.</p>
+</footer>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ===========================================================
+   CLUB DATA — generated by build.py, safe to edit by hand
+   =========================================================== */
+const CLUBS = [
+ {
+  "k": "United",
+  "club": "United FC",
+  "ground": "ISD STADIUM PITCH, DUBAI SPORTS CITY · ~5,000",
+  "stadium": "ISD Stadium Pitch, Dubai Sports City",
+  "ll": [
+   25.0381508,
+   55.2248425
+  ],
+  "pid": "ChIJPxkCnrxtXz4RMureVHyMCk0",
+  "q": "ISD+Stadium+Pitch,+Dubai+Sports+City",
+  "c": "#1C4C8C",
+  "tags": [
+   "dubai",
+   "underdog",
+   "cheap"
+  ],
+  "why": "Founded 2022, promoted this summer, and the first privately owned club ever to reach the UAE top flight — with Andrea Pirlo still in the dugout. Sixth after three games, and the league's leading scorer is theirs.",
+  "squad": [
+   [
+    "Willy Semedo",
+    "3 goals, top of the charts"
+   ],
+   [
+    "Shavy Babicka",
+    "Gabon winger, 2 goals"
+   ],
+   [
+    "Haris Seferović",
+    "ex-Benfica, Switzerland"
+   ],
+   [
+    "Moustapha Namé",
+    "Senegal midfield"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjBOv1fSeOpciVlG2HTgcKTuKlnPvkdnJgG6e2AWiZyJ18JOq9k9tjID7yMl6iLFzDhSG91kQ1rik1j591HAFhcXn61Yai3HR4Tne8_s2HXq4QMQo69hJT_JYDBB4WG_ani1h543K4sj-cjZsg=s4800-w1200-h800",
+  "alt": "ISD Stadium Pitch, Dubai Sports City",
+  "credit": "ISD Stadium Pitch / Google Maps",
+  "nearCase": "Two seasons old, a World Cup winner in the dugout, and the league's top scorer. As a local club that is an absurd hand to be dealt."
+ },
+ {
+  "k": "Al Wasl",
+  "club": "Al Wasl",
+  "ground": "ZABEEL STADIUM, AL JADDAF · 8,439",
+  "stadium": "Zabeel Stadium, Al Jaddaf",
+  "ll": [
+   25.2188,
+   55.3162238
+  ],
+  "pid": "ChIJixa8b01dXz4R1iKugfDQv5o",
+  "q": "Zabeel+Stadium,+Dubai",
+  "c": "#C8A02E",
+  "tags": [
+   "dubai",
+   "winning",
+   "atmos",
+   "cheap"
+  ],
+  "why": "Eight league titles and the tightest ground in the emirate — every seat is close enough to hear the bench. Fourth after three games under Rui Vitória, with the best goal difference outside the top three.",
+  "squad": [
+   [
+    "Ali Saleh",
+    "UAE international, 2 goals"
+   ],
+   [
+    "Renato Tapia",
+    "Peru, ex-Celta"
+   ],
+   [
+    "Nicolás Giménez",
+    "Argentine forward"
+   ],
+   [
+    "Sérgio Andrade",
+    "2 goals already"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjCshXamQKGb0C31LYBz26RlXuloubEdwYujI-1KEIJ6a0q4frh1Nj6wyXswErmBDYngp9oj5DFcOhVOz1WK39LAiwDR_L2wRC_EnyhjZmz-TqW52LSsGAut0LGOyuoZZC5gyIy_AwE8OpLJPfQ=s4800-w1200-h800",
+  "alt": "Zabeel Stadium, Dubai",
+  "credit": "Ameer Fadhil / Google Maps",
+  "nearCase": "Eight titles and 8,439 seats. Having this as your local means never wondering whether the atmosphere will turn up."
+ },
+ {
+  "k": "Al Nasr",
+  "club": "Al Nasr",
+  "ground": "AL MAKTOUM STADIUM, OUD METHA · 15,000",
+  "stadium": "Al Maktoum Stadium, Oud Metha",
+  "ll": [
+   25.2399256,
+   55.312173
+  ],
+  "pid": "ChIJIR2E59JCXz4RHPuiYICnfrU",
+  "q": "Al-Maktoum+Stadium,+Dubai",
+  "c": "#1B4FA0",
+  "tags": [
+   "dubai",
+   "underdog",
+   "atmos"
+  ],
+  "why": "Dubai's oldest club, and they have not won the league since 1986. Forty years of nearly. They recruited hard this summer, so there's a real chance you'd be arriving just before something finally gives.",
+  "squad": [
+   [
+    "Chris Bedia",
+    "3 goals, ex-Young Boys"
+   ],
+   [
+    "Ajdin Hrustić",
+    "Australia, two World Cups"
+   ],
+   [
+    "Marius Marin",
+    "30+ Romania caps"
+   ],
+   [
+    "Marius Høibråten",
+    "Norway centre-back"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjDxiqvYMB5DLtG1Z0OHQRhwXfYUkPYmrI5nfrKAKC8tcWyLWElA6LMgiJxhb5oSXkG4WKn03AMNYya0iq7HjeN7g-H001KUtqiFa6K37NFwv7i4Qu8JS0Y9by1_VbcpysOclgkUBw17rj4NX-NvdNFNvw=s4800-w1200-h800",
+  "alt": "Al Maktoum Stadium, Oud Metha",
+  "credit": "Al-Maktoum Stadium / Google Maps",
+  "nearCase": "Forty years without a title. If they ever end it, you'll want to have been there for the boring years first."
+ },
+ {
+  "k": "Shabab Al Ahli",
+  "club": "Shabab Al Ahli",
+  "ground": "RASHID STADIUM, AL NAHDA · 12,052",
+  "stadium": "Rashid Stadium, Al Nahda",
+  "ll": [
+   25.280085,
+   55.3598996
+  ],
+  "pid": "ChIJqbO7ul9cXz4Ri_BIPXg-pQk",
+  "q": "Rashid+Stadium,+Dubai",
+  "c": "#B8123A",
+  "tags": [
+   "dubai",
+   "winning",
+   "atmos"
+  ],
+  "why": "Dubai's most decorated club, top of the table on a perfect nine points, one goal conceded. André Jardine — who won Olympic gold with Brazil — took over this summer. The shortest path to watching good football regularly.",
+  "squad": [
+   [
+    "Sardar Azmoun",
+    "Iran's centre-forward"
+   ],
+   [
+    "Yuri César",
+    "2 goals in 3"
+   ],
+   [
+    "Saeid Ezatolahi",
+    "2 goals from midfield"
+   ],
+   [
+    "Igor Gomes",
+    "Brazilian playmaker"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjCroesN6wkWZJ9OHtyf4XSH4_8ViTUIjM7IS94AMqdxFHRMVfd83aXqsmWrLgxyAQ9h8-KvUDI5yHynriZdTZyrbIsUrw4cWnpqfbZmuANfbErMT8ej6eo97WIhm0R_sVzf6GGh9OEmTiGjVQ=s4800-w1200-h800",
+  "alt": "Rashid Stadium, Dubai",
+  "credit": "Marvin Pröhl / Google Maps",
+  "nearCase": "The most decorated club in Dubai, currently top of the league, and yours by geography. That makes for a very easy season."
+ },
+ {
+  "k": "Sharjah",
+  "club": "Sharjah",
+  "ground": "SHARJAH FOOTBALL STADIUM, SAMNAN · 11,073",
+  "stadium": "Sharjah Football Stadium, Samnan",
+  "ll": [
+   25.3331352,
+   55.4189209
+  ],
+  "pid": "ChIJkURmrEZZXz4RpevMpySIA3Y",
+  "q": "Sharjah+Football+Stadium",
+  "c": "#0B7A3B",
+  "tags": [
+   "winning",
+   "atmos"
+  ],
+  "why": "Ten President's Cups and a support that travels. They signed last season's 25-goal top scorer and two players who impressed at the World Cup. Most people's dark horse for the title.",
+  "squad": [
+   [
+    "Kodjo Laba",
+    "25 goals last season"
+   ],
+   [
+    "Julimar",
+    "3 goals in 3"
+   ],
+   [
+    "Igor Coronado",
+    "the league's best passer"
+   ],
+   [
+    "Charles Pickel",
+    "DR Congo, from Espanyol"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjDbPxkNcmLax_ANGHga78S3eWeZxonYChh2FlWMuEAYUJ-Mz1jcz6OgXidlIxGWkpZiGHBNmMuh8gvKjMNPNFhHYo2Nyy4URtOTHb_BrSugjxSvQpn_3y3j48KBnjsMK4U676HI9XOPS4scknk=s4800-w1200-h800",
+  "alt": "Sharjah Football Stadium",
+  "credit": "Javier Odériz Ezcurra / Google Maps",
+  "nearCase": "Ten President's Cups and a support that travels. Local rights to that is a good thing to inherit."
+ },
+ {
+  "k": "Ajman",
+  "club": "Ajman",
+  "ground": "AJMAN STADIUM, AL RASHIDIYA · 10,000",
+  "stadium": "Ajman Stadium, Al Rashidiya",
+  "ll": [
+   25.3924381,
+   55.4500821
+  ],
+  "pid": "ChIJo6PNZzRYXz4RWfPmlb3lPmg",
+  "q": "Ajman+Stadium",
+  "c": "#D4402C",
+  "tags": [
+   "underdog",
+   "cheap"
+  ],
+  "why": "Six points from their first three before a heavy loss in Abu Dhabi. Cheap tickets, an ultras section you can hear from the car park, and seats close enough to the pitch to matter.",
+  "squad": [
+   [
+    "Victor Henrique",
+    "2 goals, 1 assist"
+   ],
+   [
+    "Lourency",
+    "2 goals, new this summer"
+   ],
+   [
+    "Walid Azarou",
+    "Moroccan striker"
+   ],
+   [
+    "Ismail Moumen",
+    "goal and assist already"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjC7qcfppAtWNw1OJhhxAqZbngh0oar4Tv5cxsWcigbvsUURA5UaVfIiVbGgN0wlnzi7hmG1RdfMAgqMEBrhXmyDPL4xj0Gn_Uemgq9Gq6MVS_jIJrrfX3iEKvxWfu88xDPtUj56OOW2ttlUuA=s4800-w1200-h800",
+  "alt": "Ajman Stadium",
+  "credit": "Mansour M. Abdulla / Google Maps",
+  "nearCase": "Cheap tickets, a loud end behind the goal, and enough chaos that you'll never quite relax in your seat."
+ },
+ {
+  "k": "Al Ain",
+  "club": "Al Ain",
+  "ground": "HAZZA BIN ZAYED STADIUM · 25,965",
+  "stadium": "Hazza Bin Zayed Stadium",
+  "ll": [
+   24.2450328,
+   55.7170787
+  ],
+  "pid": "ChIJxaIols2zij4Ri72O1soz4ns",
+  "q": "Hazza+bin+Zayed+Stadium,+Al+Ain",
+  "c": "#4B2A6E",
+  "tags": [
+   "winning"
+  ],
+  "why": "Champions, unbeaten across the whole of last season, fifteen titles. The best stadium in the country by a distance and the best team in it. Which is exactly why picking them now feels like cheating.",
+  "squad": [
+   [
+    "Soufiane Rahimi",
+    "Morocco, 2 goals in 3"
+   ],
+   [
+    "Georgios Giakoumakis",
+    "Greece, the summer's big signing"
+   ],
+   [
+    "Valentino Lazaro",
+    "Austria, ex-Inter"
+   ],
+   [
+    "Kaku",
+    "Paraguay playmaker"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjAHDpD-406TVSJs8N9Hx_SHoEkhbwX14li1RZKH2V4fXg9Bd49JLYreoW0KgGl_SGzQs6KAG1vjgO7_WC8u2oqvi0oNKVTlPpeRaKKDBK0xBEo8-ZQttc7q-kihSgKRccX0luPyKr2VhiYf5Ts=s4800-w1200-h800",
+  "alt": "Hazza bin Zayed Stadium, Al Ain",
+  "credit": "Juan Cruz Sainiuk / Google Maps",
+  "nearCase": "Fifteen titles and the best stadium in the country, on your doorstep. There is nothing here to think about."
+ },
+ {
+  "k": "Al Jazira",
+  "club": "Al Jazira",
+  "ground": "MOHAMMED BIN ZAYED STADIUM, ABU DHABI · 42,056",
+  "stadium": "Mohammed Bin Zayed Stadium, Abu Dhabi",
+  "ll": [
+   24.4527612,
+   54.3921882
+  ],
+  "pid": "ChIJuTrO3WJoXj4R5S9C-q63-tE",
+  "q": "Mohammed+bin+Zayed+Stadium,+Abu+Dhabi",
+  "c": "#B01F3C",
+  "tags": [
+   "winning",
+   "atmos"
+  ],
+  "why": "The biggest ground in the league and three clean sheets from three games under Cosmin Olăroiu. Six years without a title and a squad built to end it.",
+  "squad": [
+   [
+    "Malcom",
+    "ex-Barcelona, Zenit"
+   ],
+   [
+    "Simon Banza",
+    "DR Congo striker"
+   ],
+   [
+    "Vinícius Mello",
+    "2 goals in 3"
+   ],
+   [
+    "Milson",
+    "2 assists already"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjCqqEJOKGtnqdO8Gfg-dTkex91UxkvPNRiYmOWWEZjRAWJm2xQQXobwCrFU_8E2aSn_QIyIsKUK6tajFV9X2jDsxNDwG1h9PaLeso-ZWMNqEkCM5GSFSm2llrl86AkzZq2DHRkTi94FEqcQVA=s4800-w1200-h800",
+  "alt": "Mohammed bin Zayed Stadium, Abu Dhabi",
+  "credit": "Al-Jazira MBZ Stadium / Google Maps",
+  "nearCase": "Forty-two thousand seats and three clean sheets from three. The biggest room in the league is your nearest one."
+ },
+ {
+  "k": "Al Wahda",
+  "club": "Al Wahda",
+  "ground": "AL NAHYAN STADIUM, ABU DHABI · 12,000",
+  "stadium": "Al Nahyan Stadium, Abu Dhabi",
+  "ll": [
+   24.4693856,
+   54.3753124
+  ],
+  "pid": "ChIJrdexuCRmXj4RI3Q4d9KLTdM",
+  "q": "Al+Nahyan+Stadium,+Abu+Dhabi",
+  "c": "#6B1B33",
+  "tags": [
+   "atmos"
+  ],
+  "why": "League Cup holders — they beat Al Ain on penalties last season, the only blot on an otherwise perfect year for the champions. New coach, slow start, plenty of talent.",
+  "squad": [
+   [
+    "Gastón Álvarez",
+    "Uruguay centre-back"
+   ],
+   [
+    "Facundo Kruspzky",
+    "Argentine forward"
+   ],
+   [
+    "Alaeddine Zouhir",
+    "Moroccan winger"
+   ],
+   [
+    "Brahima Diarra",
+    "Mali midfield"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjB40sEOzC5P5W3KnLnrviiXPjDICEUBr-f2j2sOxxkfp1rjoVcPNQ6ijQ_2_3URs77CPLFuPka5ihr3ktQs8YHOpqbE398q-iPYgMPmgkaeJWtoPl_IloE2WNTsg3O6by8LoFV-ZXqSBcAF=s4800-w1200-h800",
+  "alt": "Al Nahyan Stadium, Abu Dhabi",
+  "credit": "Dexter Wang / Google Maps",
+  "nearCase": "They took the unbeaten champions to penalties and won. Being nearest makes that story yours to tell."
+ },
+ {
+  "k": "Baniyas",
+  "club": "Baniyas",
+  "ground": "BANIYAS STADIUM, AL SHAMKHA · 9,570",
+  "stadium": "Baniyas Stadium, Al Shamkha",
+  "ll": [
+   24.3498291,
+   54.6856894
+  ],
+  "pid": "ChIJPQvr0W82Xj4RUWCyw6MWe0Q",
+  "q": "Baniyas+Club,+Abu+Dhabi",
+  "c": "#0E5C8A",
+  "tags": [
+   "underdog",
+   "cheap"
+  ],
+  "why": "Three defeats from three despite scoring five — the classic great-fun-no-points start. Niakaté will score all season regardless of where they finish.",
+  "squad": [
+   [
+    "Youssoufou Niakaté",
+    "3 goals in 3"
+   ],
+   [
+    "Alhassan Koroma",
+    "2 assists"
+   ],
+   [
+    "Mackenzie Hunt",
+    "2 assists"
+   ],
+   [
+    "Rocky Marciano",
+    "yes, that is his name"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjD-Fqd644sLRLr8xgWxJE_LwqZmbe2UjTaeRYy5hzsG-KfmneMSHRgYvHNchN2hE85oNHEIHlgU2dU-43_GFWUF6-RhT5xzSGUsJNyb5pDWeAzWbKRIRMFJELPCd5mT6ed5lG8s0PuqFWA7cZI=s4800-w1200-h800",
+  "alt": "Baniyas Stadium, Al Shamkha",
+  "credit": "mahmoud sayed / Google Maps",
+  "nearCase": "They score, they concede, they lose. As a neighbourhood habit that's more entertaining than it is successful."
+ },
+ {
+  "k": "Hatta",
+  "club": "Hatta",
+  "ground": "HAMDAN BIN RASHID STADIUM, HATTA · 3,000",
+  "stadium": "Hamdan Bin Rashid Stadium, Hatta",
+  "ll": [
+   24.8038975,
+   56.1123094
+  ],
+  "pid": "ChIJ97-fkjIZ9T4R0M4S7U5xPl4",
+  "q": "Hamdan+Bin+Rashid+Stadium,+Hatta",
+  "c": "#C2172F",
+  "tags": [
+   "underdog",
+   "dubai",
+   "cheap"
+  ],
+  "why": "Technically a Dubai club, up near the Omani border. Promoted, tipped for relegation, and playing in front of 3,000 people in the coolest air in the emirate.",
+  "squad": [
+   [
+    "Firas Ben Larbi",
+    "Tunisia, 2 goals 1 assist"
+   ],
+   [
+    "Bruno Leonardo",
+    "Brazilian forward"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjBJLweuIg-tIDHHNy6k3Tc7i5Ohj8z93qD-GzE7_TP6k4fZWQZYteSkgpDDRCjFfvnzT3urQ4RetEhpITuD3MB1-muD7yLjVhbqJybFzGqu83HP-TqY46pIafWT7-b0bbAEkxVRtK4uWLAVeTYcqB3J7w=s4800-w1200-h800",
+  "alt": "Hamdan Bin Rashid Stadium, Hatta",
+  "credit": "Mohammed Jabir KK / Google Maps",
+  "nearCase": "Three thousand people in mountain air. Nobody picks Hatta from a distance — being local is the only good reason, and it's enough."
+ },
+ {
+  "k": "Kalba",
+  "club": "Ittihad Kalba",
+  "ground": "ITTIHAD KALBA STADIUM · 6,000",
+  "stadium": "Ittihad Kalba Stadium",
+  "ll": [
+   25.0599489,
+   56.3467097
+  ],
+  "pid": "ChIJ0129HlX79D4R2zj9EULLsDs",
+  "q": "Ittihad+Kalba+Club,+Kalba",
+  "c": "#12776B",
+  "tags": [
+   "underdog",
+   "cheap"
+  ],
+  "why": "Former Real Madrid winger Víctor Sánchez is the new coach, and the drive crosses the Hajar mountains to the Gulf of Oman. One point so far — but the trip is half the reason.",
+  "squad": [
+   [
+    "Saman Ghoddos",
+    "Iran, ex-Brentford"
+   ],
+   [
+    "Ahmad Nourollahi",
+    "Iran midfield"
+   ],
+   [
+    "Carlos Alberto",
+    "Brazilian playmaker"
+   ],
+   [
+    "Nemanja Jović",
+    "already sent off once"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjBdw9-Y8PODjBUfAPzMqLm1U6CTg4YAN4ABggRV7RGXwl7iu_8KXgx04uRquwI_ouE90xXRMyBRvIj0Acuc5sqI20oYgTKdG1e4SdInD13WjKE3AUuFaxGrKRbfe8cXs1ginybwmuJGqJS1iu0=s4800-w1200-h800",
+  "alt": "Ittihad Kalba club",
+  "credit": "Hassan Ali / Google Maps",
+  "nearCase": "A former Real Madrid winger managing on the east coast in front of 6,000. Quietly one of the better ways to spend a Friday."
+ },
+ {
+  "k": "Khor Fakkan",
+  "club": "Khor Fakkan",
+  "ground": "SAQR BIN MOHAMMAD ALQASSIMI STADIUM · 2,880",
+  "stadium": "Saqr Bin Mohammad Alqassimi Stadium",
+  "ll": [
+   25.3699336,
+   56.3451529
+  ],
+  "pid": "ChIJ-7PJExlP9D4RT9i3YUtkq2M",
+  "q": "Saqr+bin+Mohammad+AlQassimi+Stadium,+Khor+Fakkan",
+  "c": "#1D4E9B",
+  "tags": [
+   "underdog",
+   "cheap"
+  ],
+  "why": "The smallest ground in the league, wedged between the mountains and the sea. Under 3,000 seats means you are never more than a few rows from the pitch.",
+  "squad": [
+   [
+    "Aylton Boa Morte",
+    "goal and assist"
+   ],
+   [
+    "Junior Flemmings",
+    "Jamaica forward"
+   ],
+   [
+    "Ahmed Barman",
+    "UAE veteran"
+   ],
+   [
+    "Luis Haquín",
+    "Bolivia centre-back"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjCfXarjXKnZc4_elQvfLOGskvqTTWeBnmKSQksKAJsbJ7cYukZ9nZSit1qjiOE8n2TgpE3oEF5kFbQuHPKXbEuTRoManqRevsTae9a9TmqbcKkEsiSY9gr5TBvv-59xTjVQEWFsCGyvbgTGfA=s4800-w1200-h800",
+  "alt": "Saqr bin Mohammad AlQassimi Stadium, Khor Fakkan",
+  "credit": "Fares jnaidi / Google Maps",
+  "nearCase": "Under 3,000 seats between the mountains and the sea. If it's your local, you have the best-sited ground in the country."
+ },
+ {
+  "k": "Al Dhafra",
+  "club": "Al Dhafra",
+  "ground": "AL DHAFRA STADIUM, MADINAT ZAYED · 12,000",
+  "stadium": "Al Dhafra Stadium, Madinat Zayed",
+  "ll": [
+   23.6689209,
+   53.6936068
+  ],
+  "pid": "ChIJ-zKWggJnZz4RbHOTIHKQYmc",
+  "q": "Al+Dhafra+Stadium,+Madinat+Zayed",
+  "c": "#0A7A55",
+  "tags": [
+   "underdog"
+  ],
+  "why": "Deep in the Western Region. Nearly three hours each way, no points and one goal so far. Supporting them from JVC would be an act of pure principle.",
+  "squad": [
+   [
+    "Sory Kaba",
+    "Guinea centre-forward"
+   ],
+   [
+    "Dominique Mendy",
+    "scored their only goal"
+   ]
+  ],
+  "img": "https://lh3.googleusercontent.com/place-photos/AG9NLjAmtZLW4KLYsOEEDSm2ZFD4Y8MwHWNnixtQNv92Y0TR7vAgUBQaFtUss8GW4YLcHWdofbxfMh2B1uG7WsdIj_11I0OFl3eEUI5ogGHuHCcX8Vx0TjxAtQYCgfFQljMSH0tgtohgW-OZNYGniWM=s4800-w1200-h800",
+  "alt": "Al Dhafra Stadium, Madinat Zayed",
+  "credit": "Bash K Ronard / Google Maps",
+  "nearCase": "Bottom of the league and hours from anywhere. If this is your nearest club, supporting them isn't a choice — it's just what you do."
+ }
+];
+
+/* ===========================================================
+   LIVE DATA
+   =========================================================== */
+const FEED_URL = "data.json";
+const SNAPSHOT_DATE = "2026-09-02";
+const STALE_AFTER_DAYS = 8;
+
+let STANDINGS = [
+  {key:"Shabab Al Ahli", name:"Shabab Al Ahli", p:3,w:3,d:0,l:0,gf:8,ga:1,pts:9},
+  {key:"Al Jazira",      name:"Al Jazira",      p:3,w:3,d:0,l:0,gf:7,ga:0,pts:9},
+  {key:"Al Ain",         name:"Al Ain",         p:3,w:3,d:0,l:0,gf:8,ga:3,pts:9},
+  {key:"Al Wasl",        name:"Al Wasl",        p:3,w:2,d:0,l:1,gf:8,ga:2,pts:6},
+  {key:"Sharjah",        name:"Sharjah",        p:3,w:2,d:0,l:1,gf:6,ga:3,pts:6},
+  {key:"United",         name:"United FC",      p:3,w:2,d:0,l:1,gf:8,ga:8,pts:6},
+  {key:"Ajman",          name:"Ajman",          p:3,w:2,d:0,l:1,gf:7,ga:8,pts:6},
+  {key:"Al Nasr",        name:"Al Nasr",        p:3,w:1,d:1,l:1,gf:4,ga:4,pts:4},
+  {key:"Al Wahda",       name:"Al Wahda",       p:3,w:1,d:0,l:2,gf:4,ga:5,pts:3},
+  {key:"Khor Fakkan",    name:"Khor Fakkan",    p:3,w:1,d:0,l:2,gf:3,ga:7,pts:3},
+  {key:"Kalba",          name:"Ittihad Kalba",  p:3,w:0,d:1,l:2,gf:3,ga:9,pts:1},
+  {key:"Baniyas",        name:"Baniyas",        p:3,w:0,d:0,l:3,gf:5,ga:9,pts:0},
+  {key:"Hatta",          name:"Hatta",          p:3,w:0,d:0,l:3,gf:3,ga:9,pts:0},
+  {key:"Al Dhafra",      name:"Al Dhafra",      p:3,w:0,d:0,l:3,gf:1,ga:7,pts:0}
+];
+
+let FIXTURES = [
+  {date:"Fri 4 Sep", home:"Kalba",          away:"Al Ain",      venueKey:"Kalba",          venue:"Kalba Stadium",              url:"https://sharjah.platinumlist.net/aed/event-tickets/108011/kalba-fc-vs-al-ain-fc/ticket-office"},
+  {date:"Fri 4 Sep", home:"Al Wasl",        away:"Khor Fakkan", venueKey:"Al Wasl",        venue:"Zabeel Stadium, Dubai",      url:"https://dubai.platinumlist.net/aed/event-tickets/108012/al-wasl-fc-vs-khorfakkan-fc/ticket-office"},
+  {date:"Sat 5 Sep", home:"Baniyas",        away:"Hatta",       venueKey:"Baniyas",        venue:"Baniyas Stadium, Abu Dhabi", url:"https://abu-dhabi.platinumlist.net/aed/event-tickets/108014/baniyas-fc-vs-hatta-fc/ticket-office"},
+  {date:"Sat 5 Sep", home:"Sharjah",        away:"United FC",   venueKey:"Sharjah",        venue:"Sharjah Football Stadium",   url:"https://sharjah.platinumlist.net/aed/event-tickets/108016/sharjah-fc-vs-united-fc/ticket-office"},
+  {date:"Sat 5 Sep", home:"Shabab Al Ahli", away:"Al Jazira",   venueKey:"Shabab Al Ahli", venue:"Rashid Stadium, Dubai",      url:"https://dubai.platinumlist.net/aed/event-tickets/108017/shabab-al-ahli-fc-vs-al-jazira-fc/ticket-office"},
+  {date:"Sun 6 Sep", home:"Al Nasr",        away:"Ajman",       venueKey:"Al Nasr",        venue:"Al Maktoum Stadium, Dubai",  url:"https://dubai.platinumlist.net/aed/event-tickets/108019/al-nasr-fc-vs-ajman-fc/ticket-office"},
+  {date:"Sun 6 Sep", home:"Al Dhafra",      away:"Al Wahda",    venueKey:"Al Dhafra",      venue:"Hamdan Bin Zayed Stadium",   url:"https://abu-dhabi.platinumlist.net/aed/event-tickets/108018/al-dhafra-fc-vs-al-wahda-fc/ticket-office"}
+];
+
+/* ===========================================================
+   LOCATION
+   =========================================================== */
+const DEFAULT_HOME = {label:"Jumeirah Village Circle, Dubai", short:"Jumeirah Village Circle", ll:[25.0575, 55.2066]};
+let home = {...DEFAULT_HOME};
+
+const $ = (id) => document.getElementById(id);
+const byKey = Object.fromEntries(CLUBS.map(c => [c.k, c]));
+
+function esc(s){ return String(s).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
+function fmtMins(m){
+  if(m == null) return "—";
+  if(m < 60) return Math.round(m) + " min";
+  const h = Math.floor(m/60), r = Math.round(m%60);
+  return r ? `${h} h ${r}` : `${h} h`;
+}
+function ordinal(n){
+  const s = ["th","st","nd","rd"], v = n % 100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+function haversine(a, b){
+  const R = 6371, toRad = d => d*Math.PI/180;
+  const dLat = toRad(b[0]-a[0]), dLon = toRad(b[1]-a[1]);
+  const x = Math.sin(dLat/2)**2 + Math.cos(toRad(a[0]))*Math.cos(toRad(b[0]))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));
+}
+
+/* Real driving times from OSRM's public router in one request.
+   Falls back to a straight-line estimate if it's unreachable. */
+async function computeTrips(){
+  const coords = [[home.ll[1], home.ll[0]], ...CLUBS.map(c => [c.ll[1], c.ll[0]])]
+    .map(p => p.join(',')).join(';');
+  const url = `https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=duration,distance`;
+
+  try{
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('router ' + res.status);
+    const j = await res.json();
+    const durs = j.durations && j.durations[0];
+    const dists = j.distances && j.distances[0];
+    if(!durs || durs.length !== CLUBS.length + 1) throw new Error('unexpected shape');
+    CLUBS.forEach((c, i) => {
+      c.mins = durs[i+1] != null ? durs[i+1] / 60 : null;
+      c.km   = dists && dists[i+1] != null ? dists[i+1] / 1000 : haversine(home.ll, c.ll) * 1.35;
+      c.est  = false;
+    });
+    return 'routed';
+  } catch(err){
+    console.warn('Routing unavailable, estimating:', err);
+    CLUBS.forEach(c => {
+      const km = haversine(home.ll, c.ll) * 1.25;   // roads are never straight
+      // First 30 km is town driving; anything beyond it is motorway.
+      const town = Math.min(km, 30), motorway = Math.max(0, km - 30);
+      c.km = km;
+      c.mins = (town / 70 + motorway / 100) * 60 + 5;
+      c.est = true;
+    });
+    return 'estimated';
+  }
+}
+
+/* ===========================================================
+   RENDERING
+   =========================================================== */
+const BANDS = [
+  {max: 15,       title: "On your doorstep",        note: "You could leave at kick-off minus twenty."},
+  {max: 35,       title: "Across town",             note: "A weeknight game is realistic."},
+  {max: 70,       title: "Worth the trip",          note: "Weekend territory."},
+  {max: Infinity, title: "A day out, not a habit",  note: "Beautiful grounds, long drives."}
+];
+
+function posOf(key){
+  const i = STANDINGS.findIndex(r => r.key === key);
+  return i === -1 ? null : i + 1;
+}
+function dirUrl(c){
+  return `https://www.google.com/maps/dir/?api=1&origin=${home.ll[0]},${home.ll[1]}`
+       + `&destination=${c.q}&destination_place_id=${c.pid}&travelmode=driving`;
+}
+function tagsFor(c){
+  return c.mins != null && c.mins <= 35 ? c.tags.concat('close') : c.tags;
+}
+
+function renderTable(){
+  $('tableBody').innerHTML = STANDINGS.map((r, i) => {
+    const c = byKey[r.key];
+    const near = c && c.mins != null && c.mins <= 60;
+    const gd = r.gf - r.ga;
+    const zone = i < 3 ? '<span class="zone acl">Champions League</span>'
+              : i >= STANDINGS.length - 2 ? '<span class="zone rel">Relegation</span>' : '';
+    return `<tr class="${near ? 'near' : 'far'}">
+      <td class="pos">${i+1}</td>
+      <td class="name"><i style="background:${c ? c.c : '#555'}"></i>${esc(r.name)}</td>
+      <td class="num">${r.p}</td><td class="num">${r.w}</td><td class="num">${r.d}</td><td class="num">${r.l}</td>
+      <td class="num">${r.gf}</td><td class="num">${r.ga}</td>
+      <td class="num">${gd > 0 ? '+' + gd : gd < 0 ? '\u2212' + Math.abs(gd) : '0'}</td>
+      <td class="num pts">${r.pts}</td>
+      <td class="trip">${c ? fmtMins(c.mins) : '—'}</td>
+      <td>${zone}</td>
+    </tr>`;
+  }).join('');
+}
+
+function sideWithPos(name){
+  const c = CLUBS.find(x => x.club === name || x.k === name) ||
+            CLUBS.find(x => name.toLowerCase().includes(x.k.toLowerCase()));
+  const p = c ? posOf(c.k) : null;
+  const cls = p == null ? '' : p <= 3 ? ' top' : p >= STANDINGS.length - 1 ? ' bottom' : '';
+  const badge = p ? `<span class="pos-badge${cls}">${ordinal(p)}</span>` : '';
+  return badge + esc(name);
+}
+
+function renderFixtures(){
+  const list = $('fixtureList'), note = $('fixtureNote');
+  if(!FIXTURES.length){
+    list.innerHTML = '<p class="empty">No matches on sale right now. The league releases each round about a week ahead.</p>';
+    note.textContent = '';
+    return;
+  }
+  list.innerHTML = FIXTURES.map(f => {
+    const c = byKey[f.venueKey];
+    const near = c && c.mins != null && c.mins <= 60;
+    return `<div class="fix${near ? ' pick' : ''}">
+      <div class="when">${esc(f.date)}</div>
+      <div class="tie">${sideWithPos(f.home)} <span class="v">v</span> ${sideWithPos(f.away)}</div>
+      <div class="at"><b>${esc(f.venue)}</b>${c ? fmtMins(c.mins) + ' from you' : ''}</div>
+      <a class="buy" target="_blank" rel="noopener" href="${f.url}">Buy tickets</a>
+    </div>`;
+  }).join('');
+
+  const closest = FIXTURES.map(f => ({f, c: byKey[f.venueKey]}))
+    .filter(x => x.c && x.c.mins != null)
+    .sort((a, b) => a.c.mins - b.c.mins)[0];
+  note.textContent = closest
+    ? `Shortest trip on this card: ${closest.f.home} v ${closest.f.away} at ${closest.f.venue}, ${fmtMins(closest.c.mins)} away. Kick-off times are on each ticket page.`
+    : 'Kick-off times are shown on each ticket page.';
+}
+
+function renderClubs(){
+  const sorted = [...CLUBS].sort((a, b) => (a.mins ?? 1e9) - (b.mins ?? 1e9));
+  const html = BANDS.map((band, bi) => {
+    const lo = bi === 0 ? -1 : BANDS[bi-1].max;
+    const inBand = sorted.filter(c => c.mins > lo && c.mins <= band.max);
+    if(!inBand.length) return '';
+    return `<div class="band">
+      <div class="band-title">
+        <h3>${band.title}</h3>
+        <span>${inBand.length} CLUB${inBand.length === 1 ? '' : 'S'} · ${band.note.toUpperCase()}</span>
+      </div>
+      <div class="grid">${inBand.map(cardHtml).join('')}</div>
+    </div>`;
+  }).join('');
+  $('clubBands').innerHTML = html;
+}
+
+function cardHtml(c){
+  const p = posOf(c.k);
+  return `<article class="card" data-tags="${tagsFor(c).join(' ')}" data-key="${esc(c.k)}" style="--club:${c.c}">
+    <div class="stripe"></div>
+    <div class="shot">
+      <img alt="${esc(c.alt)}" src="${c.img}" loading="lazy">
+      <div class="credit">${esc(c.credit)}</div>
+      <div class="drive">${fmtMins(c.mins)}<small>${c.km ? Math.round(c.km) + ' km' : ''}${c.est ? ' · estimated' : ''}</small></div>
+    </div>
+    <div class="body">
+      <h4 class="club">${esc(c.club)}${p ? `<span class="lpos">${ordinal(p)}</span>` : ''}</h4>
+      <p class="ground">${esc(c.ground)}</p>
+      <p class="why">${c.why}</p>
+      <ul class="squad">${c.squad.map(s => `<li><b>${esc(s[0])}</b><span>${esc(s[1])}</span></li>`).join('')}</ul>
+      <a class="go" target="_blank" rel="noopener" href="${dirUrl(c)}">Get directions</a>
+    </div>
+  </article>`;
+}
+
+function renderSummary(){
+  const rank = [...CLUBS].filter(c => c.mins != null).sort((a, b) => a.mins - b.mins);
+  if(!rank.length) return;
+  const near = rank[0], far = rank[rank.length - 1];
+  const within30 = rank.filter(c => c.mins <= 30).length;
+
+  $('metaHome').textContent = home.short;
+  $('metaNear').textContent = `${near.club.toUpperCase()}, ${fmtMins(near.mins)}`;
+  $('metaFar').textContent  = `${far.club.toUpperCase()}, ${fmtMins(far.mins)}`;
+
+  $('statBand').textContent = within30;
+  $('statNear').textContent = fmtMins(near.mins);
+  $('statFar').textContent  = fmtMins(far.mins);
+
+  /* verdict follows the nearest club, whoever that turns out to be */
+  $('verdictClub').textContent = near.club + '.';
+  $('verdictLead').innerHTML =
+    `Your nearest ground is <b>${esc(near.stadium)}</b>, ${fmtMins(near.mins)} away. `
+    + (rank[1] ? `The next closest is ${esc(rank[1].club)} at ${fmtMins(rank[1].mins)} — `
+        + (rank[1].mins - near.mins > 12
+            ? `a meaningful gap, and one you'll feel every single matchday.`
+            : `close enough that either would work, so pick on football instead.`)
+      : '');
+  $('verdictCase').textContent = near.nearCase;
+
+  const leader = STANDINGS[0] ? byKey[STANDINGS[0].key] : null;
+  const picks = [
+    ['Want history',  byKey['Al Wasl']],
+    ['Want trophies', leader],
+    ['Want to suffer',byKey['Al Nasr']],
+    ['Want the best', byKey['Al Ain']]
+  ].filter(([, c]) => c && c.k !== near.k);
+
+  $('verdictOthers').innerHTML = picks.map(([label, c]) =>
+    `<div class="other"><b>${label}</b><span>${esc(c.club)}, ${fmtMins(c.mins)} away.</span></div>`
+  ).join('');
+}
+
+/* ===========================================================
+   MAP
+   =========================================================== */
+let map, homeMarker, clubMarkers = {};
+
+function shade(m){ return m <= 35 ? '#F2EFE9' : m <= 60 ? '#8C8C85' : '#4A4A46'; }
+function pinIcon(color, size, ring){
+  return L.divIcon({
+    className: '', iconSize: [size, size], iconAnchor: [size/2, size/2],
+    html: `<div class="pin" style="width:${size}px;height:${size}px;background:${color};color:${ring}"></div>`
+  });
+}
+
+function initMap(){
+  map = L.map('map', {scrollWheelZoom:false}).setView(home.ll, 8);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'&copy; OpenStreetMap contributors &copy; CARTO', subdomains:'abcd', maxZoom:19
+  }).addTo(map);
+
+  homeMarker = L.marker(home.ll, {icon: pinIcon('#E8452C', 16, 'rgba(232,69,44,.35)'), zIndexOffset:1000}).addTo(map);
+
+  CLUBS.forEach(c => {
+    const m = L.marker(c.ll, {icon: pinIcon('#8C8C85', 13, 'rgba(0,0,0,.6)')}).addTo(map);
+    m.on('click', () => {
+      const card = document.querySelector(`.card[data-key="${c.k}"]`);
+      if(card) setTimeout(() => card.scrollIntoView({block:'center'}), 700);
+    });
+    clubMarkers[c.k] = m;
+  });
+  refreshMap();
+}
+
+function refreshMap(){
+  homeMarker.setLatLng(home.ll)
+    .bindPopup(`<span class="pn">${esc(home.short)}</span><span class="pd">Your starting point.</span>`);
+  CLUBS.forEach(c => {
+    const m = clubMarkers[c.k];
+    if(!m) return;
+    m.setIcon(pinIcon(c.mins != null ? shade(c.mins) : '#4A4A46', 13, 'rgba(0,0,0,.6)'));
+    m.bindPopup(
+      `<span class="pn">${esc(c.club)}</span>` +
+      `<span class="pd">${esc(c.stadium)} · ${fmtMins(c.mins)} away</span>` +
+      `<a href="${dirUrl(c)}" target="_blank" rel="noopener">Get directions</a>`
+    );
+  });
+  map.fitBounds(L.latLngBounds([home.ll, ...CLUBS.map(c => c.ll)]).pad(0.12));
+}
+
+/* ===========================================================
+   FILTERS
+   =========================================================== */
+const active = new Set();
+document.querySelectorAll('.chip-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const f = btn.dataset.f;
+    if(active.has(f)){ active.delete(f); btn.setAttribute('aria-pressed','false'); }
+    else { active.add(f); btn.setAttribute('aria-pressed','true'); }
+    applyFilters();
+  });
+});
+
+function applyFilters(){
+  const kept = [];
+  document.querySelectorAll('.card').forEach(card => {
+    const tags = card.dataset.tags.split(' ');
+    const ok = [...active].every(f => tags.includes(f));
+    card.classList.toggle('dim', !ok);
+    const m = clubMarkers[card.dataset.key];
+    if(m) m.setOpacity(ok ? 1 : 0.2);
+    if(ok) kept.push(card.dataset.key);
+  });
+  const out = $('readout');
+  if(!active.size) out.textContent = "All fourteen clubs showing.";
+  else if(!kept.length) out.textContent = "Nothing meets all of that. Drop one condition.";
+  else if(kept.length === 1) out.textContent = "One club left standing: " + kept[0] + ".";
+  else out.textContent = kept.length + " clubs fit: " + kept.join(", ") + ".";
+}
+
+/* ===========================================================
+   FRESHNESS + FEED
+   =========================================================== */
+function setFresh(el, state, text, retry){
+  el.className = 'freshness ' + state;
+  el.innerHTML = `<i></i><span>${text}</span>` + (retry ? '<button class="reloadbtn" type="button">Retry</button>' : '');
+  const b = el.querySelector('.reloadbtn');
+  if(b) b.addEventListener('click', loadFeed);
+}
+const daysSince = iso => Math.floor((Date.now() - new Date(iso + 'T00:00:00Z')) / 86400000);
+function snapshotState(el, label){
+  const age = daysSince(SNAPSHOT_DATE);
+  setFresh(el, age > STALE_AFTER_DAYS ? 'stale' : '',
+    age > STALE_AFTER_DAYS
+      ? `${label} snapshot from ${SNAPSHOT_DATE} \u2014 ${age} days old, likely out of date`
+      : `${label} correct as of ${SNAPSHOT_DATE}`);
+}
+
+async function loadFeed(){
+  const tf = $('tableFresh'), ff = $('fixFresh');
+  if(!FEED_URL || location.protocol === 'file:'){
+    snapshotState(tf, 'Standings'); snapshotState(ff, 'Fixtures');
+    return;
+  }
+  setFresh(tf, 'loading', 'Fetching latest standings');
+  setFresh(ff, 'loading', 'Fetching tickets on sale');
+  try{
+    const res = await fetch(FEED_URL, {cache:'no-store'});
+    if(!res.ok) throw new Error('feed ' + res.status);
+    const data = await res.json();
+
+    if(Array.isArray(data.standings) && data.standings.length){
+      STANDINGS = data.standings;
+      setFresh(tf, 'live', 'Live \u2014 ' + (data.standingsLabel || 'updated just now'));
+    } else snapshotState(tf, 'Standings');
+
+    if(Array.isArray(data.fixtures)){
+      FIXTURES = data.fixtures;
+      setFresh(ff, 'live', `Live \u2014 ${data.fixtures.length} match${data.fixtures.length === 1 ? '' : 'es'} on sale now`);
+    } else snapshotState(ff, 'Fixtures');
+
+    renderTable(); renderFixtures(); renderClubs(); renderSummary(); applyFilters();
+  } catch(err){
+    console.warn('Live feed unavailable:', err);
+    setFresh(tf, 'stale', 'Live feed unreachable \u2014 showing snapshot from ' + SNAPSHOT_DATE, true);
+    setFresh(ff, 'stale', 'Live feed unreachable \u2014 showing snapshot from ' + SNAPSHOT_DATE, true);
+  }
+}
+
+/* ===========================================================
+   LOCATION CONTROL
+   =========================================================== */
+const status = $('locStatus');
+function say(msg, isErr){ status.textContent = msg; status.className = 'locstatus' + (isErr ? ' err' : ''); }
+function busy(on){ $('locGo').disabled = on; $('locMe').disabled = on; }
+
+async function setHome(next, {updateInput = true} = {}){
+  home = next;
+  if(updateInput) $('locInput').value = home.label;
+  busy(true);
+  say('Working out drive times…');
+  const how = await computeTrips();
+  renderTable(); renderFixtures(); renderClubs(); renderSummary(); refreshMap(); applyFilters();
+  busy(false);
+  say(how === 'routed'
+    ? `Distances updated from ${home.short}.`
+    : `Distances updated from ${home.short}. The routing service didn't answer, so these are estimates — the directions links are still exact.`);
+  location.hash = 'from=' + encodeURIComponent(home.label);
+}
+
+async function geocode(query){
+  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent(query);
+  const res = await fetch(url, {headers: {'Accept': 'application/json'}});
+  if(!res.ok) throw new Error('search ' + res.status);
+  const j = await res.json();
+  if(!j.length) throw new Error('not found');
+  const hit = j[0];
+  return {
+    label: hit.display_name.split(',').slice(0, 3).join(',').trim(),
+    short: hit.name || hit.display_name.split(',')[0],
+    ll: [parseFloat(hit.lat), parseFloat(hit.lon)]
+  };
+}
+
+async function submitLocation(){
+  const q = $('locInput').value.trim();
+  if(!q){ say('Type somewhere first.', true); return; }
+  busy(true); say('Looking that up…');
+  try{
+    const found = await geocode(q);
+    await setHome(found);
+  } catch(err){
+    busy(false);
+    say(err.message === 'not found'
+      ? `Couldn't find "${q}". Try adding the city — "Al Nahda, Sharjah" rather than "Al Nahda".`
+      : 'Place search is unavailable right now. Try again in a moment.', true);
+  }
+}
+
+$('locGo').addEventListener('click', submitLocation);
+$('locInput').addEventListener('keydown', e => { if(e.key === 'Enter') submitLocation(); });
+document.querySelectorAll('#locSug button').forEach(b => {
+  b.addEventListener('click', () => { $('locInput').value = b.dataset.q; submitLocation(); });
+});
+
+$('locMe').addEventListener('click', () => {
+  if(!navigator.geolocation){ say('This browser has no location support.', true); return; }
+  busy(true); say('Asking your browser where you are…');
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      await setHome({
+        label: 'My location',
+        short: 'your current location',
+        ll: [pos.coords.latitude, pos.coords.longitude]
+      });
+    },
+    err => {
+      busy(false);
+      say(err.code === 1
+        ? 'Location permission was declined. Type a place instead.'
+        : 'Couldn\'t get your location. Type a place instead.', true);
+    },
+    {timeout: 10000}
+  );
+});
+
+/* ===========================================================
+   BOOT
+   =========================================================== */
+(async function start(){
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const from = hash.get('from');
+
+  await computeTrips();
+  initMap();
+  renderTable(); renderFixtures(); renderClubs(); renderSummary(); applyFilters();
+  loadFeed();
+
+  if(from && from !== DEFAULT_HOME.label){
+    $('locInput').value = from;
+    submitLocation();
+  }
+})();
+</script>
+</body>
+</html>
