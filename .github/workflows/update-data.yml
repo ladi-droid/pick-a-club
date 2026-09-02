@@ -49,6 +49,17 @@ jobs:
             git push
           fi
 
+      - name: Report parser health
+        run: |
+          if [ "$(cat parser-status.txt)" != "ok" ]; then
+            echo "Standings could not be parsed. The site still published;"
+            echo "the table falls back to its built-in snapshot."
+            echo "Run 'node update-data.mjs --dry-run' locally to see what changed."
+            exit 1
+          fi
+          echo "Both parsers healthy."
+        continue-on-error: true
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
