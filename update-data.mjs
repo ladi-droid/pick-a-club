@@ -90,62 +90,98 @@ async function get(url, label = url, headers = BROWSER_HEADERS) {
   return body;
 }
 
-/* ---------- fixtures + tickets, from the league's own page ---------- */
+/* ---------- fixtures + tickets, from the league's own page ----------
+   Three passes over one page, because no single part of it is complete:
+
+   1. A <select> in the contact form lists EVERY match of the current round.
+      That is the authoritative fixture list — the carousel is not.
+   2. The fixture carousel carries dates, kick-off times and, for some
+      matches, a direct Platinumlist link. It also mixes in U23 games, so it
+      is used only to decorate matches from pass 1.
+   3. Anything still without a direct link falls back to the league's own
+      ticket listing, so every match is at least buyable.                    */
 const MONTHS = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
+const TICKETS_FALLBACK = "https://dubai.platinumlist.net/uae-pro-league";
+
+function pairKey(a, b) { return a + "|" + b; }
 
 async function getFixtures() {
   const html = await get(LEAGUE_HOME, "league home page");
-  const seen = new Set();
-  const out = [];
 
-  // Ticket links come in a few shapes — with or without /aed/, with or
-  // without /ticket-office, often trailed by analytics parameters.
-  const linkRe = /https:\/\/[a-z-]+\.platinumlist\.net\/(?:[a-z]{3}\/)?event-tickets\/(\d+)\/([a-z0-9-]+)[^"'\s<>]*/gi;
+  /* --- pass 1: the definitive list of this round's matches --- */
+  const round = [];
+  for (const m of html.matchAll(/<option[^>]*>([^<]*?\sVS\s[^<]*?)<\/option>/gi)) {
+    const tie = clean(m[1]).match(/^(.+?)\s+VS\s+(.+)$/i);
+    if (!tie) continue;
+    const homeKey = keyFor(tie[1]), awayKey = keyFor(tie[2]);
+    if (!homeKey || !awayKey || homeKey === awayKey) continue;
+    if (round.some((r) => r.homeKey === homeKey && r.awayKey === awayKey)) continue;
+    round.push({ homeKey, awayKey });
+  }
+  console.log(`  ${round.length} matches listed for this round`);
 
-  let m;
-  while ((m = linkRe.exec(html)) !== null) {
-    const [rawUrl, id, slug] = [m[0], m[1], m[2]];
-    if (seen.has(id)) continue;
+  /* --- pass 2: dates, times and ticket links from the carousel --- */
+  const extras = new Map();
+  const cardRe = /<a[^>]+href="[^"]*\/en\/fixtures\/[0-9a-f][0-9a-f-]{7,}"[^>]*>([\s\S]{0,500}?)<\/a>/gi;
+  for (const card of html.matchAll(cardRe)) {
+    const tie = clean(card[1]).match(/(.+?)\s+VS\s+(.+)/i);
+    if (!tie) continue;
+    const homeKey = keyFor(tie[1]), awayKey = keyFor(tie[2]);
+    if (!homeKey || !awayKey) continue;
 
-    const parts = slug.split("-vs-");
+    const after = html.slice(card.index, card.index + 3000);
+    const when = after.match(/(\d{1,2})\s+([A-Z][a-z]{2})\s+(\d{1,2}:\d{2})/);
+    const link = after.match(/https:\/\/[a-z-]+\.platinumlist\.net\/(?:[a-z]{3}\/)?event-tickets\/\d+\/[a-z0-9-]+[^"'\s<>]*/i);
+
+    const key = pairKey(homeKey, awayKey);
+    const prev = extras.get(key) || {};
+    extras.set(key, {
+      when: prev.when || when,
+      url: prev.url || (link ? link[0].split("?")[0] : null)
+    });
+  }
+
+  /* Ticket links elsewhere on the page still count — match them by slug. */
+  const looseRe = /https:\/\/[a-z-]+\.platinumlist\.net\/(?:[a-z]{3}\/)?event-tickets\/(\d+)\/([a-z0-9-]+)[^"'\s<>]*/gi;
+  for (const m of html.matchAll(looseRe)) {
+    const parts = m[2].split("-vs-");
     if (parts.length !== 2) continue;
-
     const homeKey = keyFor(parts[0].replace(/-/g, " "));
     const awayKey = keyFor(parts[1].replace(/-/g, " "));
-    if (!homeKey || !awayKey) {
-      console.log(`  skipped "${slug}" — club names not recognised`);
-      continue;
-    }
-    seen.add(id);
+    if (!homeKey || !awayKey) continue;
+    const key = pairKey(homeKey, awayKey);
+    const prev = extras.get(key) || {};
+    if (!prev.url) extras.set(key, { ...prev, url: m[0].split("?")[0] });
+  }
 
-    const url = rawUrl.split("?")[0];   // drop the tracking tail
-
-    // Kick-off sits just above the button, e.g. "04 Sep 17:45".
-    const before = html.slice(Math.max(0, m.index - 2000), m.index);
-    const when = [...before.matchAll(/(\d{1,2})\s+([A-Z][a-z]{2})\s+(\d{1,2}:\d{2})/g)].pop();
-
+  /* --- pass 3: assemble --- */
+  let direct = 0;
+  const out = round.map(({ homeKey, awayKey }) => {
+    const e = extras.get(pairKey(homeKey, awayKey)) || {};
     let date = "", time = "", sortKey = Number.MAX_SAFE_INTEGER;
-    if (when && MONTHS[when[2]] !== undefined) {
-      const d = new Date(Date.UTC(new Date().getUTCFullYear(), MONTHS[when[2]], +when[1]));
+    if (e.when && MONTHS[e.when[2]] !== undefined) {
+      const [hh, mm] = e.when[3].split(":").map(Number);
+      const d = new Date(Date.UTC(new Date().getUTCFullYear(), MONTHS[e.when[2]], +e.when[1], hh, mm));
       sortKey = d.getTime();
       date = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-      time = when[3];
+      time = e.when[3];
     }
-
-    out.push({
+    if (e.url) direct++;
+    return {
       date, time, sortKey,
       home: DISPLAY[homeKey] || homeKey,
       away: DISPLAY[awayKey] || awayKey,
       venueKey: homeKey,
-      venue: "",                 // the page supplies this from its own club data
-      url
-    });
-  }
+      venue: "",
+      url: e.url || TICKETS_FALLBACK,
+      directLink: Boolean(e.url)
+    };
+  });
 
-  console.log(`  ${seen.size} ticket links found, ${out.length} usable fixtures`);
-  if (!seen.size) {
+  console.log(`  ${direct} of ${out.length} have a direct ticket link; the rest use the league listing`);
+  if (!out.length) {
     const hint = html.match(/platinumlist\.net[^"'\s]{0,60}/i);
-    console.error("  no ticket links on the page. Nearest match: " + (hint ? hint[0] : "none"));
+    console.error("  no fixtures found on the page. Nearest ticket link: " + (hint ? hint[0] : "none"));
   }
 
   out.sort((a, b) => a.sortKey - b.sortKey);
