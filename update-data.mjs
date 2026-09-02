@@ -90,6 +90,43 @@ async function get(url, label = url, headers = BROWSER_HEADERS) {
   return body;
 }
 
+/* Optional sources shouldn't be able to hang or kill the run. */
+async function tryGet(url, label, ms = 9000) {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), ms);
+  try {
+    const res = await fetch(url, { headers: BROWSER_HEADERS, redirect: "follow", signal: ac.signal });
+    const body = await res.text();
+    console.log(`  fetch ${label}: HTTP ${res.status}, ${body.length} bytes`);
+    return res.ok ? body : null;
+  } catch (e) {
+    console.log(`  fetch ${label} failed: ${e.name === "AbortError" ? "timed out" : e.message}`);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* Pulls a date and time out of a Platinumlist page, trying the most reliable
+   form first: structured data, then the printed date, then the short header. */
+const MONTH_NAMES = "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec";
+function readEventDate(html) {
+  const ld = html.match(/"startDate"\s*:\s*"(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (ld) {
+    return { y: +ld[1], mo: +ld[2] - 1, d: +ld[3], time: ld[4] ? `${ld[4]}:${ld[5]}` : "" };
+  }
+  const printed = html.match(new RegExp(`Date:\\s*(\\d{1,2})(?:st|nd|rd|th)?\\s+(${MONTH_NAMES})[a-z]*,?\\s*(\\d{4})`, "i"));
+  const clock = html.match(/Doors\s*:?\s*(\d{1,2}:\d{2})/i);
+  if (printed) {
+    return { y: +printed[3], mo: MONTHS[printed[2].slice(0,3)], d: +printed[1], time: clock ? clock[1] : "" };
+  }
+  const short = html.match(new RegExp(`(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\\s+(\\d{1,2})\\s+(${MONTH_NAMES})`, "i"));
+  if (short) {
+    return { y: new Date().getUTCFullYear(), mo: MONTHS[short[2].slice(0,3)], d: +short[1], time: clock ? clock[1] : "" };
+  }
+  return null;
+}
+
 /* ---------- fixtures + tickets, from the league's own page ----------
    Three passes over one page, because no single part of it is complete:
 
@@ -102,6 +139,7 @@ async function get(url, label = url, headers = BROWSER_HEADERS) {
       ticket listing, so every match is at least buyable.                    */
 const MONTHS = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
 const TICKETS_FALLBACK = "https://dubai.platinumlist.net/uae-pro-league";
+const PLATINUMLIST_LIST = "https://uaeproleague.platinumlist.net/";
 
 function pairKey(a, b) { return a + "|" + b; }
 
@@ -154,17 +192,81 @@ async function getFixtures() {
     if (!prev.url) extras.set(key, { ...prev, url: m[0].split("?")[0] });
   }
 
+  /* --- pass 2.5: Platinumlist's own league listing ---
+     Carries every match on sale with its date and venue. It refused a
+     connection once from GitHub's network, so it's optional: if it answers
+     we get complete data, if not we carry on with what the league page gave. */
+  const listing = await tryGet(PLATINUMLIST_LIST, "platinumlist listing");
+  if (listing) {
+    /* Each event's details sit between its own link and the next one. Slicing
+       on that boundary stops one match borrowing its neighbour's date. */
+    const hits = [...listing.matchAll(looseRe)];
+    let added = 0;
+    for (let i = 0; i < hits.length; i++) {
+      const m = hits[i];
+      const parts = m[2].split("-vs-");
+      if (parts.length !== 2) continue;
+      const homeKey = keyFor(parts[0].replace(/-/g, " "));
+      const awayKey = keyFor(parts[1].replace(/-/g, " "));
+      if (!homeKey || !awayKey) continue;
+
+      const blockEnd = i + 1 < hits.length ? hits[i + 1].index : listing.length;
+      const block = listing.slice(m.index, Math.min(blockEnd, m.index + 3000));
+
+      const key = pairKey(homeKey, awayKey);
+      const prev = extras.get(key) || {};
+      const stamp = readEventDate(block);
+      const venue = block.match(/Venue:\s*([^<\n|·]{3,70})/i);
+      if (!prev.url || (!prev.when && stamp)) added++;
+      extras.set(key, {
+        when: prev.when,
+        stamp: prev.stamp || stamp,
+        venue: prev.venue || (venue ? clean(venue[1]).replace(/\s*[-–·].*$/, "") : ""),
+        url: prev.url || m[0].split("?")[0]
+      });
+    }
+    console.log(`  listing filled in details for ${added} matches`);
+  }
+
+  /* --- pass 4: last resort, open the individual ticket pages ---
+     Only for matches still missing a date, and capped so a bad day costs
+     seconds rather than minutes. */
+  const dateless = round.filter(({ homeKey, awayKey }) => {
+    const e = extras.get(pairKey(homeKey, awayKey));
+    return e && e.url && !e.when && !e.stamp;
+  }).slice(0, 6);
+
+  for (const { homeKey, awayKey } of dateless) {
+    const key = pairKey(homeKey, awayKey);
+    const e = extras.get(key);
+    const page = await tryGet(e.url, `event page ${homeKey} v ${awayKey}`);
+    if (!page) continue;
+    const stamp = readEventDate(page);
+    const venue = page.match(/Venue:\s*([^<\n|·]{3,70})/i);
+    if (stamp) extras.set(key, { ...e, stamp, venue: e.venue || (venue ? clean(venue[1]) : "") });
+  }
+
   /* --- pass 3: assemble --- */
   let direct = 0;
   const out = round.map(({ homeKey, awayKey }) => {
     const e = extras.get(pairKey(homeKey, awayKey)) || {};
     let date = "", time = "", sortKey = Number.MAX_SAFE_INTEGER;
+
+    /* The league carousel gives "04 Sep 17:45"; Platinumlist gives a full
+       timestamp. Prefer the carousel, since it always carries a kick-off. */
+    let y, mo, d, hh = 0, mm = 0;
     if (e.when && MONTHS[e.when[2]] !== undefined) {
-      const [hh, mm] = e.when[3].split(":").map(Number);
-      const d = new Date(Date.UTC(new Date().getUTCFullYear(), MONTHS[e.when[2]], +e.when[1], hh, mm));
-      sortKey = d.getTime();
-      date = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+      y = new Date().getUTCFullYear(); mo = MONTHS[e.when[2]]; d = +e.when[1];
+      [hh, mm] = e.when[3].split(":").map(Number);
       time = e.when[3];
+    } else if (e.stamp) {
+      ({ y, mo, d } = e.stamp);
+      if (e.stamp.time) { [hh, mm] = e.stamp.time.split(":").map(Number); time = e.stamp.time; }
+    }
+    if (y !== undefined) {
+      const dt = new Date(Date.UTC(y, mo, d, hh, mm));
+      sortKey = dt.getTime();
+      date = dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
     }
     if (e.url) direct++;
     return {
@@ -172,13 +274,14 @@ async function getFixtures() {
       home: DISPLAY[homeKey] || homeKey,
       away: DISPLAY[awayKey] || awayKey,
       venueKey: homeKey,
-      venue: "",
+      venue: e.venue || "",
       url: e.url || TICKETS_FALLBACK,
       directLink: Boolean(e.url)
     };
   });
 
-  console.log(`  ${direct} of ${out.length} have a direct ticket link; the rest use the league listing`);
+  const dated = out.filter((f) => f.date).length;
+  console.log(`  ${direct} of ${out.length} have a direct ticket link, ${dated} of ${out.length} have a date`);
   if (!out.length) {
     const hint = html.match(/platinumlist\.net[^"'\s]{0,60}/i);
     console.error("  no fixtures found on the page. Nearest ticket link: " + (hint ? hint[0] : "none"));
